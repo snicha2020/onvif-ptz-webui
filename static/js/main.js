@@ -20,7 +20,7 @@ const TILT_SPEED_CONFIG = 0.5;
 const ZOOM_SPEED_CONFIG = 0.5;
 
 /// --- Backend URL ---
-const BACKEND_BASE_URL = 'http://localhost:5000'; // Replace if your backend is on a different address/port
+const BACKEND_BASE_URL = document.URL; // Replace if your backend is on a different address/port
 
 // --- Logging and UI functions ---
 function logger(message, type = 'info') {
@@ -309,6 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
             videoStreamImgElement.onerror = () => {
                 logger("Error loading video stream. Ensure that the backend is configured, the camera is accessible, and the RTSP URL is correct.", "error");
                 videoStreamImgElement.src = "https://placehold.co/640x360/000000/FFFFFF?text=Video+loading+error%0A(check+the+URL+and+backend)";
+                videoStreamImgElement.onerror = () => {};
             };
             videoStreamImgElement.onload = () => {
                  logger("The video stream has been successfully loaded (or loading has begun).", "success");
