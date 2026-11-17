@@ -26,6 +26,7 @@ class CameraType(Enum):
     YOOSEE = "YOOSEE"
     YCC365 = "YCC365"
     Y05 = "Y05"
+    ACTI_Z952 = "ACTI_Z952"
 
 # Constants for ONVIF
 Y05_DEFAULT_PROFILE = "PROFILE_000"
@@ -38,6 +39,9 @@ YCC365_DEFAULT_PROFILE = "Profile_1"
 YCC365_SERVICE_PATH = "/onvif/PTZ"
 YCC365_DEFAULT_HEADERS = {'Content-Type': 'application/soap+xml;charset=UTF8'}
 
+ACTI_Z952_DEFAULT_PROFILE = "media_profile3"
+ACTI_Z952_SERVICE_PATH = "/onvif/ptz"
+ACTI_Z952_DEFAULT_HEADERS = {'Content-Type': 'application/soap+xml;charset=UTF8'}
 
 def get_camera_onvif_params(camera_type_enum_str):
     try:
@@ -52,6 +56,8 @@ def get_camera_onvif_params(camera_type_enum_str):
         return YOOSEE_DEFAULT_PROFILE, YOOSEE_SERVICE_PATH
     elif camera_type_enum == CameraType.YCC365:
         return YCC365_DEFAULT_PROFILE, YCC365_SERVICE_PATH
+    elif camera_type_enum == CameraType.ACTI_Z952:
+        return ACTI_Z952_DEFAULT_PROFILE, ACTI_Z952_SERVICE_PATH
     return None, None
 
 def generate_onvif_wssecurity_header(user, password):
@@ -113,14 +119,17 @@ def send_ptz_request(host, camera_type_str, user, password, service_content_buil
         action_url = f"http://www.onvif.org/ver20/ptz/wsdl/{onvif_action}"
         headers = {'Content-Type': f'application/soap+xml;charset=UTF8;action="{action_url}"'}
 
-    elif camera_type_str.upper() == CameraType.YCC365.name:
+    elif camera_type_str.upper() in [CameraType.YCC365.name, CameraType.ACTI_Z952.name]:
         xml_payload = f"""<?xml version="1.0" encoding="utf-8"?>
                         <soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:tptz="http://www.onvif.org/ver20/ptz/wsdl" xmlns:tt="http://www.onvif.org/ver10/schema">
                             <soap:Body>
                             {service_content}
                             </soap:Body>
                         </soap:Envelope>"""
-        headers = YCC365_DEFAULT_HEADERS
+        if camera_type_str.upper() == CameraType.ACTI_Z952.name:
+            headers = ACTI_Z952_DEFAULT_HEADERS
+        else:
+            headers = YCC365_DEFAULT_HEADERS
 
     if xml_payload:
         try:

@@ -60,6 +60,7 @@ function hideLoader() {
 const CAMERA_PARAMS_CONFIG = {
     YOOSEE: { profile: "IPCProfilesToken1", servicePath: ":5000/onvif/ptz_service" },
     YCC365: { profile: "Profile_1", servicePath: "/onvif/PTZ" },
+    ACTI_Z952: { profile: "media_profile3", servicePath: "/onvif/ptz" },
     Y05:    { profile: "PROFILE_000", servicePath: ":6688/onvif/ptz_service" }
 };
 
