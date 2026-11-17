@@ -87,7 +87,7 @@ def generate_onvif_wssecurity_header(user, password):
 
 def build_onvif_envelope(user, password, service_content, camera_type_enum_str):
     header_part = ""
-    if camera_type_enum_str.upper() in [CameraType.YOOSEE.name, CameraType.Y05.name]:
+    if camera_type_enum_str.upper() in [CameraType.YOOSEE.name, CameraType.Y05.name, CameraType.ACTI_Z952.name]:
         header_part = generate_onvif_wssecurity_header(user, password)
 
     return f"""<?xml version="1.0" encoding="utf-8"?>
@@ -113,23 +113,20 @@ def send_ptz_request(host, camera_type_str, user, password, service_content_buil
 
     service_content = service_content_builder(profile_token, x, y, z)
 
-    if camera_type_str.upper() in [CameraType.YOOSEE.name, CameraType.Y05.name]:
+    if camera_type_str.upper() in [CameraType.YOOSEE.name, CameraType.Y05.name, CameraType.ACTI_Z952.name]:
         xml_payload = build_onvif_envelope(user, password, service_content, camera_type_str)
         onvif_action = "Stop" if ptz_action_name == "Stop" else "ContinuousMove"
         action_url = f"http://www.onvif.org/ver20/ptz/wsdl/{onvif_action}"
         headers = {'Content-Type': f'application/soap+xml;charset=UTF8;action="{action_url}"'}
 
-    elif camera_type_str.upper() in [CameraType.YCC365.name, CameraType.ACTI_Z952.name]:
+    elif camera_type_str.upper() in [CameraType.YCC365.name, ]:
         xml_payload = f"""<?xml version="1.0" encoding="utf-8"?>
                         <soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:tptz="http://www.onvif.org/ver20/ptz/wsdl" xmlns:tt="http://www.onvif.org/ver10/schema">
                             <soap:Body>
                             {service_content}
                             </soap:Body>
                         </soap:Envelope>"""
-        if camera_type_str.upper() == CameraType.ACTI_Z952.name:
-            headers = ACTI_Z952_DEFAULT_HEADERS
-        else:
-            headers = YCC365_DEFAULT_HEADERS
+        headers = YCC365_DEFAULT_HEADERS
 
     if xml_payload:
         try:
@@ -147,16 +144,16 @@ def send_ptz_request(host, camera_type_str, user, password, service_content_buil
     else:
         return jsonify({"status": "error", "message": "Failed to generate XML payload"}), 500
 
-SELECTED_CAMERA_TYPE_NAME_GLOBAL = CameraType.YCC365.name
+SELECTED_CAMERA_TYPE_NAME_GLOBAL = CameraType.ACTI_Z952.name
 
 def build_stop_content(profile_token, x, y, z):
-    if SELECTED_CAMERA_TYPE_NAME_GLOBAL.upper() in [CameraType.YOOSEE.name, CameraType.Y05.name]:
+    if SELECTED_CAMERA_TYPE_NAME_GLOBAL.upper() in [CameraType.YOOSEE.name, CameraType.Y05.name, CameraType.ACTI_Z952.name]:
         return f"""<Stop xmlns="http://www.onvif.org/ver20/ptz/wsdl">
                     <ProfileToken>{profile_token}</ProfileToken>
                     <PanTilt>true</PanTilt>
                     <Zoom>true</Zoom>
                 </Stop>"""
-    elif SELECTED_CAMERA_TYPE_NAME_GLOBAL.upper() == CameraType.YCC365.name:
+    elif SELECTED_CAMERA_TYPE_NAME_GLOBAL.upper() in [CameraType.YCC365.name, ]:
          return f"""<tptz:Stop>
                     <tptz:ProfileToken>{profile_token}</tptz:ProfileToken>
                     <tptz:PanTilt>true</tptz:PanTilt>
@@ -165,7 +162,7 @@ def build_stop_content(profile_token, x, y, z):
     return ""
 
 def build_continuous_move_content(profile_token, x_speed, y_speed, z_speed):
-    if SELECTED_CAMERA_TYPE_NAME_GLOBAL.upper() in [CameraType.YOOSEE.name, CameraType.Y05.name]:
+    if SELECTED_CAMERA_TYPE_NAME_GLOBAL.upper() in [CameraType.YOOSEE.name, CameraType.Y05.name, CameraType.ACTI_Z952.name]:
         return f"""<ContinuousMove xmlns="http://www.onvif.org/ver20/ptz/wsdl">
                     <ProfileToken>{profile_token}</ProfileToken>
                     <Velocity>
