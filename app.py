@@ -10,6 +10,8 @@ from datetime import datetime, timezone
 from enum import Enum
 import threading # For background video capture
 
+import multiprocessing as mp
+
 # --- Initial Configuration (can be overridden by requests) ---
 DEFAULT_RTSP_URL = "rtsp://admin:123456@192.168.0.167:554"
 # --- End of Configuration ---
@@ -222,6 +224,85 @@ video_capture = None
 video_thread = None
 rtsp_url_global = DEFAULT_RTSP_URL
 
+
+# from https://stackoverflow.com/questions/60816436/open-cv-rtsp-camera-buffer-lag
+class Camera():
+
+    def __init__(self,rtsp_url):
+        #load pipe for data transmittion to the process
+        self.parent_conn, child_conn = mp.Pipe()
+        #load process
+        self.p = mp.Process(target=self.update, args=(child_conn,rtsp_url))
+        #start process
+        self.p.daemon = True
+        self.p.start()
+
+    def end(self):
+        #send closure request to process
+
+        self.parent_conn.send(2)
+
+    def update(self,conn,rtsp_url):
+        #load cam into seperate process
+
+        print("Cam Loading...")
+        cap = cv2.VideoCapture(
+            rtsp_url,
+            cv2.CAP_FFMPEG,
+            params=[cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 2000]
+            )
+        print("Cam Loaded...")
+        run = True
+
+        while run:
+
+            #grab frames from the buffer
+            cap.grab()
+
+            #recieve input data
+            rec_dat = conn.recv()
+
+
+            if rec_dat == 1:
+                #if frame requested
+                ret,frame = cap.read()
+                conn.send(frame)
+
+            elif rec_dat ==2:
+                #if close requested
+                cap.release()
+                run = False
+
+        print("Camera Connection Closed")
+        conn.close()
+
+    def get_frame(self,resize=None):
+        ###used to grab frames from the cam connection process
+
+        ##[resize] param : % of size reduction or increase i.e 0.65 for 35% reduction  or 1.5 for a 50% increase
+
+        #send request
+        self.parent_conn.send(1)
+        frame = self.parent_conn.recv()
+
+        #reset request
+        self.parent_conn.send(0)
+
+        #resize if needed
+        if resize == None:
+            return frame
+        else:
+            return self.rescale_frame(frame,resize)
+
+    def rescale_frame(self,frame, percent=65):
+
+        return cv2.resize(frame,None,fx=percent,fy=percent)
+
+
+
+
+
+
 def capture_frames():
     global video_capture, rtsp_url_global
 
@@ -235,15 +316,20 @@ def capture_frames():
     # However, for MJPEG streaming, there is typically one source per URL.
 
     # Revised - set timeout
-    cap = cv2.VideoCapture(
-        current_capture_rtsp_url,
-        apiPreference=cv2.CAP_FFMPEG,
-        params=[cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 5000],  # 5 second
-    )
+    # cap = cv2.VideoCapture(
+    #     current_capture_rtsp_url,
+    #     apiPreference=cv2.CAP_FFMPEG,
+    #     params=[cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 5000],  # 5 second
+    # )
 
-    if not cap.isOpened():
+    cam = Camera(current_capture_rtsp_url)
+
+
+    # if not cap.isOpened():
+    if not cam.p.is_alive():
         logger_error(f"Capture stream: Error connecting to RTSP: {current_capture_rtsp_url}")
-        cap.release()
+        # cap.release()
+        cam.end()
         return
 
     logger_info(f"Capture Stream: RTSP stream successfully opened for {current_capture_rtsp_url}")
@@ -255,13 +341,16 @@ def capture_frames():
             logger_info(f"Capture Stream: RTSP URL has changed from {current_capture_rtsp_url} on {rtsp_url_global}. Termination of the current thread.")
             break
 
-        if cap.isOpened():
-            ret, frame = cap.read()
-            if not ret:
-                logger_error(f"Capture Stream: Error getting frame with {current_capture_rtsp_url}. Thread completed or lost.")
-                # Attempting to reconnect from within a yield generator doesn't work very well in the long run.
-                # It is better to have the video_feed restart the stream.
-                break
+        # if cap.isOpened():
+        if cam.p.is_alive():
+            # ret, frame = cap.read()
+            frame = cam.get_frame()
+            time.sleep(0.5)
+            # if not ret:
+            #     logger_error(f"Capture Stream: Error getting frame with {current_capture_rtsp_url}. Thread completed or lost.")
+            #     # Attempting to reconnect from within a yield generator doesn't work very well in the long run.
+            #     # It is better to have the video_feed restart the stream.
+            #     break
 
             (flag, encodedImage) = cv2.imencode(".jpg", frame)
             if not flag:
@@ -273,7 +362,8 @@ def capture_frames():
             break
 
     logger_info(f"Capture Thread: Freeing up resources for {current_capture_rtsp_url}")
-    cap.release()
+    # cap.release()
+    cam.end()
 
 
 @app.route('/api/video-stream')
