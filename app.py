@@ -237,8 +237,8 @@ def capture_frames():
     # Revised - set timeout
     cap = cv2.VideoCapture(
         current_capture_rtsp_url,
-        apiPreference=cv2.CAP_FFMPEG,
-        params=[cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 1000],  # 1 second
+        apiPreference=cv2.CAP_ANY,
+        params=[cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 5000],  # 1 second
     )
 
     if not cap.isOpened():
