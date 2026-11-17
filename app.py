@@ -237,8 +237,8 @@ def capture_frames():
     # Revised - set timeout
     cap = cv2.VideoCapture(
         current_capture_rtsp_url,
-        apiPreference=cv2.CAP_ANY,
-        params=[cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 5000],  # 1 second
+        apiPreference=cv2.CAP_FFMPEG,
+        params=[cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 5000],  # 5 second
     )
 
     if not cap.isOpened():
@@ -258,7 +258,7 @@ def capture_frames():
         if cap.isOpened():
             ret, frame = cap.read()
             if not ret:
-                logger_error(f"Capture Stream: Error getting frame with {current_capture_rtsp_url}. Поток завершен или потерян.")
+                logger_error(f"Capture Stream: Error getting frame with {current_capture_rtsp_url}. Thread completed or lost.")
                 # Attempting to reconnect from within a yield generator doesn't work very well in the long run.
                 # It is better to have the video_feed restart the stream.
                 break
