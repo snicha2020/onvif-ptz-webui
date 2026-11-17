@@ -233,7 +233,13 @@ def capture_frames():
     # We do not use the global `video_capture` directly for initialization here,
     # ensuring that each thread works with its own instance if necessary.
     # However, for MJPEG streaming, there is typically one source per URL.
-    cap = cv2.VideoCapture(current_capture_rtsp_url)
+
+    # Revised - set timeout
+    cap = cv2.VideoCapture(
+        current_capture_rtsp_url,
+        apiPreference=cv2.CAP_FFMPEG,
+        params=[cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 1000],  # 1 second
+    )
 
     if not cap.isOpened():
         logger_error(f"Capture stream: Error connecting to RTSP: {current_capture_rtsp_url}")
