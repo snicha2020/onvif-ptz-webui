@@ -1,11 +1,11 @@
 // main.js
 
-// --- Глобальные/модульные переменные для DOM элементов ---
+// --- Global/module-level variables for DOM elements ---
 let logOutputElement = null;
 let loaderElement = null;
 let videoStreamImgElement = null;
 
-// --- Конфигурационные переменные (будут заполняться из HTML) ---
+// --- Configuration variables (to be populated from HTML) ---
 let ONVIF_HOST_CONFIG;
 let ONVIF_USER_CONFIG;
 let ONVIF_PASSWORD_CONFIG;
@@ -13,16 +13,16 @@ let RTSP_URL_CONFIG;
 let SELECTED_CAMERA_TYPE_NAME_CONFIG;
 let IS_INVERT_UPDOWN_PTZ_CONFIG;
 
-// --- Константы PTZ ---
-const PTZ_MOVE_TIME_MS = 0.4 * 1000; // Время движения в миллисекундах
+// --- PTZ constants ---
+const PTZ_MOVE_TIME_MS = 0.4 * 1000; // Movement duration in milliseconds
 const PAN_SPEED_CONFIG = 0.5;
 const TILT_SPEED_CONFIG = 0.5;
 const ZOOM_SPEED_CONFIG = 0.5;
 
-// --- URL Бэкенда ---
-const BACKEND_BASE_URL = 'http://localhost:5000'; // Замените, если ваш бэкенд на другом адресе/порту
+/// --- Backend URL ---
+const BACKEND_BASE_URL = 'http://localhost:5000'; // Replace if your backend is on a different address/port
 
-// --- Функции Логирования и UI ---
+// --- Logging and UI functions ---
 function logger(message, type = 'info') {
     if (!logOutputElement) {
         console[type === 'error' ? 'error' : 'log'](`(Log element not ready) ${type.toUpperCase()}: ${message}`);
@@ -34,7 +34,7 @@ function logger(message, type = 'info') {
 
     if (type === 'error') p.style.color = 'red';
     else if (type === 'success') p.style.color = 'green';
-    
+
     logOutputElement.appendChild(p);
     logOutputElement.scrollTop = logOutputElement.scrollHeight;
     console[type === 'error' ? 'error' : 'log'](message);
@@ -44,7 +44,7 @@ function showLoader() {
     if (loaderElement) {
         loaderElement.style.display = 'block';
     } else {
-        console.warn("Элемент индикатора загрузки 'loader' не найден. Не могу показать.");
+        console.warn("The 'loader' element was not found. Unable to display.");
     }
 }
 
@@ -52,11 +52,11 @@ function hideLoader() {
     if (loaderElement) {
         loaderElement.style.display = 'none';
     } else {
-        console.warn("Элемент индикатора загрузки 'loader' не найден. Не могу скрыть.");
+        console.warn("The 'loader' element was not found. Cannot hide it.");
     }
 }
 
-// --- Функции для ONVIF PTZ управления ---
+// --- Functions for ONVIF PTZ control ---
 const CAMERA_PARAMS_CONFIG = {
     YOOSEE: { profile: "IPCProfilesToken1", servicePath: ":5000/onvif/ptz_service" },
     YCC365: { profile: "Profile_1", servicePath: "/onvif/PTZ" },
@@ -90,7 +90,7 @@ async function generateOnvifWsSecurityHeaderJS(user, password) {
     combinedData.set(nonceBytes, 0);
     combinedData.set(createdBytes, nonceBytes.length);
     combinedData.set(passwordBytes, nonceBytes.length + createdBytes.length);
-    
+
     const hashBuffer = await crypto.subtle.digest('SHA-1', combinedData);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const passwordDigest = btoa(String.fromCharCode(...hashArray));
@@ -108,8 +108,8 @@ async function generateOnvifWsSecurityHeaderJS(user, password) {
     </s:Header>`;
 }
 
-// Эта функция больше не нужна на фронтенде, т.к. бэкенд строит SOAP.
-// Оставлена для справки, если бы логика была другой.
+// This function is no longer needed on the frontend, as the backend constructs the SOAP.
+// It has been left here for reference, in case the logic were different.
 /*
 async function buildOnvifEnvelopeJS(user, password, serviceContent, cameraType) {
     // ...
@@ -133,8 +133,8 @@ async function sendOnvifRequestToBackend(ptzAction, panSpeed = 0, tiltSpeed = 0,
         payload.zoom = zoomSpeed;
     }
 
-    logger(`Отправка PTZ команды: ${ptzAction} на ${requestUrl}`);
-    
+    logger(`Sending a PTZ command: ${ptzAction} on ${requestUrl}`);
+
     try {
         const response = await fetch(requestUrl, {
             method: 'POST',
@@ -147,13 +147,13 @@ async function sendOnvifRequestToBackend(ptzAction, panSpeed = 0, tiltSpeed = 0,
         const responseData = await response.json();
 
         if (response.ok && responseData.status === 'success') {
-            logger(`PTZ ${ptzAction} успешно: ${responseData.message}`, 'success');
+            logger(`PTZ ${ptzAction} successful: ${responseData.message}`, 'success');
         } else {
             const errorMsg = responseData.message || `HTTP ${response.status}`;
-            logger(`Ошибка PTZ ${ptzAction}: ${errorMsg}. Детали: ${responseData.details || ''}`, 'error');
+            logger(`Error PTZ ${ptzAction}: ${errorMsg}. Details: ${responseData.details || ''}`, 'error');
         }
     } catch (e) {
-        logger(`Исключение при PTZ ${ptzAction}: ${e.message}`, 'error');
+        logger(`Exception when PTZ ${ptzAction}: ${e.message}`, 'error');
     } finally {
         hideLoader();
     }
@@ -167,7 +167,7 @@ async function ptzContinuousMoveRequestCommand(x, y, z) {
     await sendOnvifRequestToBackend('move', x, y, z);
 }
 
-// --- Управление состоянием движения PTZ и авто-остановка ---
+// --- PTZ motion state control and auto-stop ---
 let ptzMoveTimeoutId = null;
 let isCurrentlyMovingPtz = false;
 
@@ -178,7 +178,7 @@ function startPtzMovement(x, y, z) {
     ptzMoveTimeoutId = setTimeout(() => {
         if (isCurrentlyMovingPtz) {
             logger("Авто-остановка PTZ движения.");
-            ptzStopRequestCommand(); // Используем команду для бэкенда
+            ptzStopRequestCommand(); // We use a command for the backend
             isCurrentlyMovingPtz = false;
         }
     }, PTZ_MOVE_TIME_MS);
@@ -187,12 +187,12 @@ function startPtzMovement(x, y, z) {
 function stopPtzMovement() {
     if (ptzMoveTimeoutId) clearTimeout(ptzMoveTimeoutId);
     if (isCurrentlyMovingPtz) {
-        ptzStopRequestCommand(); // Используем команду для бэкенда
+        ptzStopRequestCommand(); // We use a command for the backend
         isCurrentlyMovingPtz = false;
     }
 }
 
-// --- Обновление конфигурации из HTML ---
+// --- Updating configuration from HTML ---
 function updateAllConfigValues() {
     ONVIF_HOST_CONFIG = document.getElementById('cameraIp').value;
     ONVIF_USER_CONFIG = document.getElementById('onvifUser').value;
@@ -200,41 +200,41 @@ function updateAllConfigValues() {
     RTSP_URL_CONFIG = document.getElementById('rtspUrl').value;
     SELECTED_CAMERA_TYPE_NAME_CONFIG = document.getElementById('cameraType').value;
     IS_INVERT_UPDOWN_PTZ_CONFIG = document.getElementById('invertUpDown').checked;
-    logger("Конфигурация обновлена из HTML полей.");
+    logger("Configuration updated from HTML fields.");
 }
 
-// --- Инициализация и обработчики событий ---
+// --- Initialization and event handlers ---
 document.addEventListener('DOMContentLoaded', () => {
-    // Инициализация DOM элементов
+    // Initialization of DOM elements
     logOutputElement = document.getElementById('logOutput');
     loaderElement = document.getElementById('loader');
     videoStreamImgElement = document.getElementById('videoStream');
 
-    // Проверки на наличие критически важных элементов
+    // Checks for the presence of critical elements
     if (!logOutputElement) {
-        console.error("КРИТИЧЕСКАЯ ОШИБКА: HTML-элемент с ID 'logOutput' не найден!");
-        alert("Ошибка: элемент для вывода логов не найден.");
+        console.error("CRITICAL ERROR: HTML element with ID 'logOutput' not found!");
+        alert("Error: element for log output not found.");
     }
     if (!loaderElement) {
-        console.error("КРИТИЧЕСКАЯ ОШИБКА: HTML-элемент с ID 'loader' не найден!");
-        alert("Ошибка: элемент индикатора загрузки не найден.");
+        console.error("CRITICAL ERROR: HTML element with ID 'loader' not found!");
+        alert("Error: loading indicator element not found.");
     }
     if (!videoStreamImgElement) {
-        console.error("КРИТИЧЕСКАЯ ОШИБКА: HTML-элемент с ID 'videoStream' не найден!");
-        alert("Ошибка: элемент для отображения видео не найден.");
+        console.error("CRITICAL ERROR: HTML element with ID 'videoStream' not found!");
+        alert("Error: element for video display not found.");
     }
 
-    updateAllConfigValues(); // Первоначальное считывание конфига
+    updateAllConfigValues(); // Initial reading of the config
 
-    // Обновление конфига при изменении полей
+    // Updating the config when fields change
     ['cameraIp', 'onvifUser', 'onvifPassword', 'rtspUrl', 'cameraType', 'invertUpDown'].forEach(id => {
         const element = document.getElementById(id);
         if (element) {
             element.addEventListener('change', updateAllConfigValues);
         }
     });
-    
-    // --- Обработчики для кнопок PTZ ---
+
+    // --- Handlers for PTZ buttons ---
     const ptzControlConfig = [
         { id: 'ptzUp',    x: 0, y: () => IS_INVERT_UPDOWN_PTZ_CONFIG ? -TILT_SPEED_CONFIG : TILT_SPEED_CONFIG, z: 0, key: 'w' },
         { id: 'ptzDown',  x: 0, y: () => IS_INVERT_UPDOWN_PTZ_CONFIG ? TILT_SPEED_CONFIG : -TILT_SPEED_CONFIG, z: 0, key: 's' },
@@ -250,13 +250,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const action = () => startPtzMovement(ctrl.x, typeof ctrl.y === 'function' ? ctrl.y() : ctrl.y, ctrl.z);
             button.addEventListener('mousedown', action);
             button.addEventListener('touchstart', (e) => { e.preventDefault(); action(); }, { passive: false });
-            
+
             button.addEventListener('mouseup', stopPtzMovement);
             button.addEventListener('mouseleave', stopPtzMovement);
             button.addEventListener('touchend', stopPtzMovement);
             button.addEventListener('touchcancel', stopPtzMovement);
         } else {
-            logger(`Кнопка PTZ с ID '${ctrl.id}' не найдена.`, 'error');
+            logger(`PTZ button with ID '${ctrl.id}' not found.`, 'error');
         }
     });
 
@@ -264,13 +264,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (stopButton) {
         stopButton.addEventListener('click', stopPtzMovement);
     } else {
-        logger("Кнопка 'ptzStop' не найдена.", 'error');
+        logger("'ptzStop' button not found.", 'error');
     }
 
-    // --- Горячие клавиши ---
+    // --- Keyboard shortcuts ---
     document.addEventListener('keydown', (event) => {
         if (document.activeElement && ['input', 'select', 'textarea'].includes(document.activeElement.tagName.toLowerCase())) {
-            return; // Не обрабатывать, если фокус на инпуте
+            return; // Do not process if the focus is on an input
         }
         const control = ptzControlConfig.find(c => c.key === event.key.toLowerCase());
         if (control && !isCurrentlyMovingPtz) {
@@ -283,7 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.addEventListener('keyup', (event) => {
         if (document.activeElement && ['input', 'select', 'textarea'].includes(document.activeElement.tagName.toLowerCase())) {
-            return; 
+            return;
         }
         const control = ptzControlConfig.find(c => c.key === event.key.toLowerCase());
         if (control && isCurrentlyMovingPtz) {
@@ -292,31 +292,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- Кнопка запуска/обновления видеопотока ---
+    // --- Video stream start/refresh button ---
     const startStreamButton = document.getElementById('startStreamButton');
     if (startStreamButton && videoStreamImgElement) {
         startStreamButton.addEventListener('click', () => {
             const currentRtspUrl = document.getElementById('rtspUrl').value;
             if (!currentRtspUrl) {
-                logger("RTSP URL не указан.", "error");
-                alert("Пожалуйста, введите RTSP URL для видеопотока.");
+                logger("RTSP URL is not specified.", "error");
+                alert("Please enter the RTSP URL for the video stream.");
                 return;
             }
-            const mjpegStreamUrl = `${BACKEND_BASE_URL}/api/video-stream?rtsp=${encodeURIComponent(currentRtspUrl)}`; 
-            logger(`Попытка загрузить видео с: ${mjpegStreamUrl}`);
+            const mjpegStreamUrl = `${BACKEND_BASE_URL}/api/video-stream?rtsp=${encodeURIComponent(currentRtspUrl)}`;
+            logger(`Attempting to load a video from: ${mjpegStreamUrl}`);
             videoStreamImgElement.src = mjpegStreamUrl;
             videoStreamImgElement.onerror = () => {
-                logger("Ошибка загрузки видеопотока. Убедитесь, что бэкенд настроен, камера доступна и RTSP URL корректен.", "error");
-                videoStreamImgElement.src = "https://placehold.co/640x360/000000/FFFFFF?text=Ошибка+загрузки+видео%0A(проверьте+URL+и+бэкенд)";
+                logger("Error loading video stream. Ensure that the backend is configured, the camera is accessible, and the RTSP URL is correct.", "error");
+                videoStreamImgElement.src = "https://placehold.co/640x360/000000/FFFFFF?text=Video+loading+error%0A(check+the+URL+and+backend)";
             };
             videoStreamImgElement.onload = () => {
-                 logger("Видеопоток успешно загружен (или начата загрузка).", "success");
+                 logger("The video stream has been successfully loaded (or loading has begun).", "success");
             };
         });
     } else {
-        logger("Кнопка 'startStreamButton' или элемент 'videoStream' не найдены.", 'error');
+        logger("The 'startStreamButton' button or the 'videoStream' element could not be found.", 'error');
     }
 
-    logger("Интерфейс инициализирован. DOM загружен.");
-    hideLoader(); // Убедимся, что лоадер скрыт при начальной загрузке
+    logger("Interface initialized. DOM loaded.");
+    hideLoader(); // Let's ensure that the loader is hidden during the initial load.
 });
